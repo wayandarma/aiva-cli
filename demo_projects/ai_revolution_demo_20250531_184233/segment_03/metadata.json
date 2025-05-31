@@ -1,0 +1,12 @@
+{
+  "segment_id": 3,
+  "text": "Today we'll explore how AI is transforming industries and",
+  "enhanced_prompt": "Dramatically lit scene, of Scene showing today we'll explore how ai is transforming industries and, high contrast, professional lighting, dramatic chiaroscuro lighting, strong shadows, professional photography, sharp focus, high contrast, moody atmosphere, intense and dramatic mood, aspect ratio 16:9",
+  "image_path": null,
+  "text_path": "segment_03/text.txt",
+  "duration": 3.6,
+  "word_count": 9,
+  "generation_time": null,
+  "status": "completed",
+  "error_message": null
+}

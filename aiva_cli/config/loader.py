@@ -38,8 +38,8 @@ class ContentConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     """AI model configuration."""
-    text_model: str = Field(default="gemini-1.5-flash")
-    image_model: str = Field(default="gemini-imagine-3")
+    text_model: str = Field(default="gemini-2.0-flash")
+    image_model: str = Field(default="imagen-3.0-generate-001")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=2048, gt=0)
     timeout: int = Field(default=30, gt=0)

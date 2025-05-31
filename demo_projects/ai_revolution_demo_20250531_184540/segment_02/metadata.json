@@ -1,0 +1,12 @@
+{
+  "segment_id": 2,
+  "text": "machines learn to think and solve problems like humans.",
+  "enhanced_prompt": "Beautiful golden hour scene, of Scene showing machines learn to think and solve problems like humans, high resolution, professional photography, warm golden hour lighting, soft shadows, perfect exposure, bokeh background, warm color palette, glowing light, serene and warm atmosphere, aspect ratio 16:9",
+  "image_path": null,
+  "text_path": "segment_02/text.txt",
+  "duration": 3.6,
+  "word_count": 9,
+  "generation_time": null,
+  "status": "completed",
+  "error_message": null
+}

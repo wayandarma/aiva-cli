@@ -1,0 +1,12 @@
+{
+  "segment_id": 6,
+  "text": "systems, processing vast amounts of data to find hidden patterns.",
+  "enhanced_prompt": "Dramatically lit scene, of Scene showing systems, processing vast amounts of data to find hidden patterns, high contrast, professional lighting, dramatic chiaroscuro lighting, strong shadows, professional photography, sharp focus, high contrast, moody atmosphere, intense and dramatic mood, aspect ratio 16:9",
+  "image_path": null,
+  "text_path": "segment_06/text.txt",
+  "duration": 4.0,
+  "word_count": 10,
+  "generation_time": null,
+  "status": "completed",
+  "error_message": null
+}

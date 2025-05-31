@@ -1,0 +1,369 @@
+{
+  "project": {
+    "project_id": "d9a2b866-143d-4017-8335-93db7ee96399",
+    "topic": "AI Revolution Demo",
+    "slug": "ai_revolution_demo_20250531_184233",
+    "created_at": "2025-05-31T18:42:33.702260",
+    "total_segments": 38,
+    "target_duration": 8.0,
+    "models_used": {
+      "text": "gemini-2.0-flash",
+      "image": "imagen-3.0-generate-001"
+    },
+    "generation_config": {
+      "style_presets": [
+        "cinematic_4k",
+        "golden_hour",
+        "dramatic_lighting"
+      ],
+      "quality": "ultra-high",
+      "aspect_ratio": "16:9"
+    },
+    "status": "in_progress",
+    "completed_at": null
+  },
+  "segments": [
+    {
+      "segment_id": 1,
+      "text": "Welcome to the fascinating world of artificial intelligence, where",
+      "enhanced_prompt": "Ultra-realistic cinematic shot, of Scene showing welcome to the fascinating world of artificial intelligence, where, 4K resolution, professional cinematography, dramatic lighting, depth of field, shot with RED camera, shallow depth of field, film grain, color graded, cinematic composition, cinematic atmosphere, aspect ratio 16:9",
+      "image_path": null,
+      "text_path": "segment_01/text.txt",
+      "duration": 3.6,
+      "word_count": 9,
+      "generation_time": null,
+      "status": "completed",
+      "error_message": null
+    },
+    {
+      "segment_id": 2,
+      "text": "machines learn to think and solve problems like humans.",
+      "enhanced_prompt": "Beautiful golden hour scene, of Scene showing machines learn to think and solve problems like humans, high resolution, professional photography, warm golden hour lighting, soft shadows, perfect exposure, bokeh background, warm color palette, glowing light, serene and warm atmosphere, aspect ratio 16:9",
+      "image_path": null,
+      "text_path": "segment_02/text.txt",
+      "duration": 3.6,
+      "word_count": 9,
+      "generation_time": null,
+      "status": "completed",
+      "error_message": null
+    },
+    {
+      "segment_id": 3,
+      "text": "Today we'll explore how AI is transforming industries and",
+      "enhanced_prompt": "Dramatically lit scene, of Scene showing today we'll explore how ai is transforming industries and, high contrast, professional lighting, dramatic chiaroscuro lighting, strong shadows, professional photography, sharp focus, high contrast, moody atmosphere, intense and dramatic mood, aspect ratio 16:9",
+      "image_path": null,
+      "text_path": "segment_03/text.txt",
+      "duration": 3.6,
+      "word_count": 9,
+      "generation_time": null,
+      "status": "completed",
+      "error_message": null
+    },
+    {
+      "segment_id": 4,
+      "text": "reshaping our future in ways we never imagined possible.",
+      "enhanced_prompt": "Ultra-realistic cinematic shot, of Scene showing reshaping our future in ways we never imagined possible, 4K resolution, professional cinematography, dramatic lighting, depth of field, shot with RED camera, shallow depth of field, film grain, color graded, cinematic composition, cinematic atmosphere, aspect ratio 16:9",
+      "image_path": null,
+      "text_path": "segment_04/text.txt",
+      "duration": 3.6,
+      "word_count": 9,
+      "generation_time": null,
+      "status": "completed",
+      "error_message": null
+    },
+    {
+      "segment_id": 5,
+      "text": "Machine learning algorithms are the backbone of modern AI",
+      "enhanced_prompt": "Beautiful golden hour scene, of Scene showing machine learning algorithms are the backbone of modern ai, high resolution, professional photography, warm golden hour lighting, soft shadows, perfect exposure, bokeh background, warm color palette, glowing light, serene and warm atmosphere, aspect ratio 16:9",
+      "image_path": null,
+      "text_path": "segment_05/text.txt",
+      "duration": 3.6,
+      "word_count": 9,
+      "generation_time": null,
+      "status": "completed",
+      "error_message": null
+    },
+    {
+      "segment_id": 6,
+      "text": "systems, processing vast amounts of data to find hidden patterns.",
+      "enhanced_prompt": "Dramatically lit scene, of Scene showing systems, processing vast amounts of data to find hidden patterns, high contrast, professional lighting, dramatic chiaroscuro lighting, strong shadows, professional photography, sharp focus, high contrast, moody atmosphere, intense and dramatic mood, aspect ratio 16:9",
+      "image_path": null,
+      "text_path": "segment_06/text.txt",
+      "duration": 4.0,
+      "word_count": 10,
+      "generation_time": null,
+      "status": "completed",
+      "error_message": null
+    },
+    {
+      "segment_id": 7,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 8,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 9,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 10,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 11,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 12,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 13,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 14,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 15,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 16,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 17,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 18,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 19,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 20,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 21,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 22,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 23,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 24,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 25,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 26,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 27,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 28,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 29,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 30,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 31,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 32,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 33,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 34,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 35,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 36,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 37,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    },
+    {
+      "segment_id": 38,
+      "status": "pending",
+      "text": null,
+      "enhanced_prompt": null,
+      "image_path": null,
+      "text_path": null
+    }
+  ],
+  "summary": {
+    "total_segments": 38,
+    "completed_segments": 6,
+    "pending_segments": 32,
+    "failed_segments": 0
+  },
+  "generated_at": "2025-05-31T18:42:33.705653",
+  "demo_info": "Phase 4 demonstration",
+  "segments_processed": 6,
+  "enhancement_styles": [
+    "cinematic_4k",
+    "golden_hour",
+    "dramatic_lighting"
+  ]
+}

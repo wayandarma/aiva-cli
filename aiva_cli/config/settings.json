@@ -39,7 +39,7 @@
       "role": "Script writer",
       "goal": "Create engaging 5-minute YouTube scripts",
       "backstory": "Expert content creator with experience in educational and cinematic storytelling",
-      "model": "gemini-1.5-flash"
+      "model": "gemini-2.0-flash"
     },
     "segmenter_agent": {
       "role": "Content segmenter",
@@ -51,13 +51,13 @@
       "role": "Visual prompt creator",
       "goal": "Generate rich, detailed image descriptions",
       "backstory": "Creative director with expertise in visual storytelling",
-      "model": "gemini-1.5-flash"
+      "model": "gemini-2.0-flash"
     },
     "image_render_agent": {
       "role": "Visual content creator",
       "goal": "Generate high-quality cinematic images",
       "backstory": "AI artist specialized in creating compelling visual content",
-      "model": "gemini-imagine-3"
+      "model": "imagen-3.0-generate-001"
     }
   },
   "workflow": {
