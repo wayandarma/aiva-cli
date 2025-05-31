@@ -71,41 +71,112 @@ def main(
     pass
 
 
+def interactive_video_type_selector() -> str:
+    """Interactive video type selection with enhanced UI."""
+    video_types = [
+        ("short", "📱 Short-form Video (15-60 seconds)", "Perfect for TikTok, YouTube Shorts, Instagram Reels"),
+        ("long-form", "🎬 Long-form Video (5-15 minutes)", "Detailed tutorials, explanations, and comprehensive content")
+    ]
+    
+    console.print("\n[bold cyan]🎯 Select Video Type:[/bold cyan]")
+    console.print("[dim]Choose the format that best fits your content goals[/dim]\n")
+    
+    for i, (key, title, description) in enumerate(video_types, 1):
+        console.print(f"[bold]{i}.[/bold] {title}")
+        console.print(f"   [dim]{description}[/dim]\n")
+    
+    while True:
+        choice = typer.prompt("👉 Select video type (1-2)", type=int)
+        if 1 <= choice <= len(video_types):
+            selected_type = video_types[choice - 1][0]
+            console.print(f"[green]✅ Selected: {video_types[choice - 1][1]}[/green]")
+            return selected_type
+        else:
+            console.print("[red]❌ Please choose 1 or 2[/red]")
+
+def interactive_output_selector() -> Optional[str]:
+    """Interactive output directory selection."""
+    console.print("\n[bold cyan]📁 Output Directory Options:[/bold cyan]")
+    
+    options = [
+        ("default", "📂 Use default (./output/)", "Recommended for most users"),
+        ("custom", "📝 Specify custom directory", "Choose your own output location")
+    ]
+    
+    for i, (key, title, description) in enumerate(options, 1):
+        console.print(f"[bold]{i}.[/bold] {title}")
+        console.print(f"   [dim]{description}[/dim]\n")
+    
+    while True:
+        choice = typer.prompt("👉 Select output option (1-2)", type=int)
+        if choice == 1:
+            console.print("[green]✅ Using default output directory[/green]")
+            return None
+        elif choice == 2:
+            custom_dir = typer.prompt("📝 Enter custom output directory")
+            if custom_dir.strip():
+                console.print(f"[green]✅ Custom directory: {custom_dir}[/green]")
+                return custom_dir.strip()
+            else:
+                console.print("[red]❌ Directory cannot be empty[/red]")
+        else:
+            console.print("[red]❌ Please choose 1 or 2[/red]")
+
+def interactive_generation_options() -> dict:
+    """Interactive selection of generation options."""
+    console.print("\n[bold cyan]⚙️  Generation Options:[/bold cyan]")
+    
+    # Verbose mode
+    verbose = typer.confirm("🔍 Enable verbose output for detailed progress?", default=False)
+    
+    # Dry run
+    dry_run = typer.confirm("🧪 Run in dry-run mode (preview only)?", default=False)
+    
+    return {
+        "verbose": verbose,
+        "dry_run": dry_run
+    }
+
 @app.command()
 def generate(
-    topic: str = typer.Argument(
-        ..., 
-        help="Topic for the YouTube video content"
+    topic: Optional[str] = typer.Argument(
+        None, 
+        help="Topic for the YouTube video content (interactive if not provided)"
     ),
     title: Optional[str] = typer.Option(
         None,
         "--title", "-T",
         help="Custom title for the content (used for project folder name)"
     ),
-    video_type: str = typer.Option(
-        "long-form", 
+    video_type: Optional[str] = typer.Option(
+        None, 
         "--type", "-t",
-        help="Video type: 'short' or 'long-form'"
+        help="Video type: 'short' or 'long-form' (interactive if not provided)"
     ),
     output_dir: Optional[str] = typer.Option(
         None,
         "--output-dir", "-o",
-        help="Custom output directory (default: output/)"
+        help="Custom output directory (interactive if not provided)"
     ),
     config_file: Optional[str] = typer.Option(
         None,
         "--config", "-c",
         help="Custom configuration file path"
     ),
-    verbose: bool = typer.Option(
-        False,
+    verbose: Optional[bool] = typer.Option(
+        None,
         "--verbose", "-v",
-        help="Enable verbose output"
+        help="Enable verbose output (interactive if not provided)"
     ),
-    dry_run: bool = typer.Option(
-        False,
+    dry_run: Optional[bool] = typer.Option(
+        None,
         "--dry-run",
-        help="Show what would be generated without actually generating"
+        help="Show what would be generated without actually generating (interactive if not provided)"
+    ),
+    interactive: bool = typer.Option(
+        False,
+        "--interactive", "-i",
+        help="Force interactive mode even when all options are provided"
     )
 ):
     """🚀 Generate YouTube content for a given topic
@@ -122,7 +193,47 @@ def generate(
         aiva generate "Climate Change Solutions" --title "Climate Solutions Guide"
         aiva generate "Space Exploration" --output-dir ./my_videos --title "Space Journey"
         aiva generate "Machine Learning" --dry-run --verbose
+        aiva generate --interactive  # Full interactive mode
     """
+    
+    # Handle interactive mode or missing parameters
+    if interactive or topic is None or video_type is None or verbose is None or dry_run is None:
+        console.print("[bold blue]🎬 AIVA Interactive Content Generator[/bold blue]")
+        console.print("[dim]Let's set up your video content generation...[/dim]\n")
+        
+        # Get topic if not provided
+        if topic is None:
+            topic = typer.prompt("\n📝 Enter your video topic")
+        
+        # Get title if not provided
+        if title is None:
+            use_custom_title = typer.confirm("\n🏷️  Would you like to set a custom title?", default=False)
+            if use_custom_title:
+                title = typer.prompt("📝 Enter custom title")
+        
+        # Get video type if not provided or in interactive mode
+        if video_type is None or interactive:
+            video_type = interactive_video_type_selector()
+        
+        # Get output directory if not provided or in interactive mode
+        if output_dir is None or interactive:
+            output_dir = interactive_output_selector()
+        
+        # Get generation options if not provided or in interactive mode
+        if verbose is None or dry_run is None or interactive:
+            options = interactive_generation_options()
+            if verbose is None:
+                verbose = options["verbose"]
+            if dry_run is None:
+                dry_run = options["dry_run"]
+    
+    # Set defaults for any remaining None values
+    if video_type is None:
+        video_type = "long-form"
+    if verbose is None:
+        verbose = False
+    if dry_run is None:
+        dry_run = False
     
     # Input validation
     validation_errors = _validate_generate_inputs(topic, video_type, output_dir, title)
@@ -248,6 +359,91 @@ def generate(
         console.print(f"[red]❌ Error during generation: {str(e)}[/red]")
         raise typer.Exit(1)
 
+
+@app.command()
+def interactive():
+    """🎯 Interactive Content Generation Wizard
+    
+    Launch a guided, step-by-step content generation experience.
+    Perfect for new users or when you want full control over all options.
+    """
+    
+    console.print(Panel(
+        "[bold blue]🎬 AIVA Interactive Content Generation Wizard[/bold blue]\n"
+        "[dim]Welcome! This wizard will guide you through creating amazing video content.[/dim]",
+        title="[bold]Welcome to AIVA[/bold]",
+        border_style="blue"
+    ))
+    
+    # Step 1: Topic
+    console.print("\n[bold cyan]Step 1: Content Topic[/bold cyan]")
+    console.print("[dim]What would you like your video to be about?[/dim]")
+    topic = typer.prompt("\n📝 Enter your video topic")
+    
+    # Step 2: Title
+    console.print("\n[bold cyan]Step 2: Project Title[/bold cyan]")
+    console.print("[dim]This will be used for organizing your project files[/dim]")
+    use_custom_title = typer.confirm("\n🏷️  Would you like to set a custom project title?", default=False)
+    title = None
+    if use_custom_title:
+        title = typer.prompt("📝 Enter custom project title")
+    
+    # Step 3: Video Type
+    video_type = interactive_video_type_selector()
+    
+    # Step 4: Output Directory
+    output_dir = interactive_output_selector()
+    
+    # Step 5: Generation Options
+    options = interactive_generation_options()
+    
+    # Step 6: Summary and Confirmation
+    console.print("\n[bold cyan]📋 Generation Summary:[/bold cyan]")
+    summary_text = Text()
+    summary_text.append(f"Topic: {topic}\n", style="green")
+    summary_text.append(f"Title: {title or 'Auto-generated from topic'}\n", style="magenta")
+    summary_text.append(f"Type: {video_type}\n", style="yellow")
+    summary_text.append(f"Output: {output_dir or './output/'}\n", style="cyan")
+    summary_text.append(f"Verbose: {'Yes' if options['verbose'] else 'No'}\n", style="blue")
+    summary_text.append(f"Dry Run: {'Yes' if options['dry_run'] else 'No'}\n", style="blue")
+    
+    console.print(Panel(
+        summary_text,
+        title="[bold]Review Your Settings[/bold]",
+        border_style="green"
+    ))
+    
+    if not typer.confirm("\n🚀 Start content generation with these settings?", default=True):
+        console.print("[yellow]❌ Generation cancelled[/yellow]")
+        raise typer.Exit(0)
+    
+    # Call the generate function with collected parameters
+    from typer.testing import CliRunner
+    import sys
+    
+    # Build command arguments
+    args = [topic]
+    if title:
+        args.extend(["--title", title])
+    if video_type:
+        args.extend(["--type", video_type])
+    if output_dir:
+        args.extend(["--output-dir", output_dir])
+    if options['verbose']:
+        args.append("--verbose")
+    if options['dry_run']:
+        args.append("--dry-run")
+    
+    # Call generate function directly
+    generate(
+        topic=topic,
+        title=title,
+        video_type=video_type,
+        output_dir=output_dir,
+        verbose=options['verbose'],
+        dry_run=options['dry_run'],
+        interactive=False
+    )
 
 @app.command()
 def init(

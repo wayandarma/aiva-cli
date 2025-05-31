@@ -222,17 +222,20 @@
 #### Step 5.1: Agent Definitions (`crew_config/agents.py`) ✅
 
 - [x] **ScriptAgent**: YouTube script generation
+
   - Role: Script writer
   - Goal: Create engaging 5-minute scripts
   - Backstory: Expert content creator
   - Tools: Text generation model
 
 - [x] **SegmenterAgent**: Script segmentation
+
   - Role: Content segmenter
   - Goal: Split scripts into 8-second segments
   - Tools: Segmentation logic
 
 - [x] **PromptGenAgent**: Visual prompt creation
+
   - Role: Visual prompt creator
   - Goal: Generate rich image descriptions
   - Tools: Prompt enhancement
@@ -264,21 +267,25 @@
 #### Phase 5 Implementation Steps ✅
 
 1. [x] **CLI Enhancement**:
+
    - Added `--title` parameter to generate command
    - Updated help documentation with new examples
    - Enhanced input validation for custom titles
 
 2. [x] **Pipeline Integration**:
+
    - Modified `generate_content()` to accept title parameter
    - Updated project slug generation for user-friendly folder names
    - Enhanced project directory structure
 
 3. [x] **CrewAI Coordination**:
+
    - Integrated existing agent system with enhanced workflow
    - Improved agent result handling and metadata tracking
    - Added comprehensive error handling and retry mechanisms
 
 4. [x] **Output Enhancement**:
+
    - Projects now saved in organized folder structure
    - Enhanced manifest with CrewAI metadata and AI model information
    - Improved success metrics and project statistics

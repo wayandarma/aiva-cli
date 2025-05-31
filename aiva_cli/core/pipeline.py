@@ -297,10 +297,22 @@ class ContentPipeline:
             config_dict = config.__dict__ if config else {}
         else:
             config_dict = config or {}
+        
+        # Determine video type-specific defaults
+        video_type = self.state.video_type if self.state else config_dict.get('video_type', 'long')
+        
+        if video_type == 'short':
+            # Short form: 5-10 segments, ~6 seconds each for under 1 minute total
+            default_segments = 8
+            default_duration = 6.0
+        else:
+            # Long form: 38 segments, 8 seconds each for ~5 minute video
+            default_segments = 38
+            default_duration = 8.0
             
         return WorkflowConfig(
-            target_segments=config_dict.get('target_segments', 38),  # Default to 38 segments for 5-minute video
-            target_duration=config_dict.get('target_duration', 8.0),  # 8 seconds per segment
+            target_segments=config_dict.get('target_segments', default_segments),
+            target_duration=config_dict.get('target_duration', default_duration),
             style_preset=config_dict.get('style_preset', StylePreset.CINEMATIC_4K),
             output_dir=config_dict.get('output_dir', './output'),
             image_size=config_dict.get('image_size', '1024x1024'),
@@ -311,22 +323,49 @@ class ContentPipeline:
     
     def _generate_full_transcript(self, topic: str, video_type: str) -> str:
         """Generate full transcript using GeminiTextModel."""
-        from ..models.text_model import GeminiTextModel
+        try:
+            from ..models.text_model import GeminiTextModel
+            from ..models import _text_model_available
+        except ImportError:
+            raise RuntimeError("Text generation not available - google-generativeai package not installed. Please install with: pip install google-generativeai")
+        
+        # Check if text model is available
+        if not _text_model_available or GeminiTextModel is None:
+            raise RuntimeError("Text generation not available - google-generativeai package not installed. Please install with: pip install google-generativeai")
         
         # Initialize text model
         text_model = GeminiTextModel()
         
-        # Create comprehensive prompt for full transcript generation
-        prompt = f"""
-Generate a complete {video_type} script about: {topic}
+        # Create video type-specific prompts
+        if video_type == 'short':
+            prompt = f"""
+Generate a complete short-form script about: {topic}
+
+Requirements:
+- Create a concise, engaging script suitable for a short video (under 1 minute, approximately 120-150 words)
+- Focus on one key message or insight
+- Start with a strong hook to grab attention immediately
+- Include punchy, memorable statements
+- Write in a dynamic, energetic tone
+- Ensure every word counts - no filler content
+- Structure for quick consumption and high engagement
+- End with a strong call-to-action or memorable conclusion
+
+Please generate only the script content without any formatting markers or stage directions.
+"""
+        else:
+            prompt = f"""
+Generate a complete long-form script about: {topic}
 
 Requirements:
 - Create a comprehensive, engaging script suitable for a 5-minute video (approximately 750-800 words)
-- Structure the content with clear narrative flow
+- Structure the content with clear narrative flow and multiple key points
 - Include natural transitions between topics
 - Write in a conversational, engaging tone
 - Focus on providing valuable information while maintaining viewer interest
+- Develop ideas thoroughly with examples and explanations
 - Ensure the content is suitable for visual representation
+- Include introduction, main content sections, and conclusion
 
 Please generate only the script content without any formatting markers or stage directions.
 """

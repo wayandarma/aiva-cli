@@ -13,8 +13,16 @@ from enum import Enum
 # Import core components
 from ..core.segmenter import ScriptSegmenter, segment_script
 from ..core.prompt_enhancer import PromptEnhancer, enhance_prompt, StylePreset
-from ..models.text_model import GeminiTextModel
-from ..models.image_model import GeminiImageModel
+# Import models with graceful fallback
+try:
+    from ..models.text_model import GeminiTextModel
+    from ..models.image_model import GeminiImageModel
+    from ..models import _text_model_available, _image_model_available
+except ImportError:
+    GeminiTextModel = None
+    GeminiImageModel = None
+    _text_model_available = False
+    _image_model_available = False
 
 
 class AgentStatus(Enum):
@@ -370,7 +378,11 @@ class ImageRenderAgent(BaseAgent):
                      "engineering and can produce stunning visuals that bring "
                      "stories to life with photorealistic quality."
         )
-        self.image_model = GeminiImageModel()
+        # Initialize image model if available
+        if GeminiImageModel and _image_model_available:
+            self.image_model = GeminiImageModel()
+        else:
+            self.image_model = None
     
     def _setup_tools(self) -> List[Any]:
         """Setup image generation tools."""
@@ -456,6 +468,20 @@ class ImageRenderAgent(BaseAgent):
         from pathlib import Path
         
         start_time = time.time()
+        
+        # Check if image model is available
+        if self.image_model is None:
+            generation_time = time.time() - start_time
+            error_msg = "Image generation not available - google-generativeai package not installed"
+            self.logger.error(error_msg)
+            return {
+                "path": None,
+                "generation_time": generation_time,
+                "size": size,
+                "format": "PNG",
+                "success": False,
+                "error": error_msg
+            }
         
         try:
             # Ensure output directory exists

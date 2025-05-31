@@ -10,7 +10,7 @@ import os
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator # Updated import
 from dotenv import load_dotenv
 
 
@@ -91,7 +91,8 @@ class AIVASettings(BaseModel):
     max_retries: int = Field(default=3, ge=0)
     concurrent_tasks: int = Field(default=2, ge=1, le=10)
     
-    @validator('gemini_api_key')
+    @field_validator('gemini_api_key') # Updated decorator
+    @classmethod # Added classmethod decorator as per Pydantic V2 style for field_validator
     def validate_api_key(cls, v):
         if not v:
             raise ValueError('Gemini API key is required')
@@ -103,7 +104,8 @@ class AIVASettings(BaseModel):
             raise ValueError('Valid Gemini API key is required')
         return v
     
-    @validator('logging')
+    @field_validator('logging') # Updated decorator
+    @classmethod # Added classmethod decorator as per Pydantic V2 style for field_validator
     def validate_logging_level(cls, v):
         valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
         if v.level.upper() not in valid_levels:

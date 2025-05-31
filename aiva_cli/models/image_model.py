@@ -13,9 +13,20 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 from io import BytesIO
 
-from google import genai
-from google.genai import types
-from PIL import Image
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    raise ImportError(
+        "google-genai package is required. Install with: pip install google-genai"
+    )
+
+try:
+    from PIL import Image
+except ImportError:
+    raise ImportError(
+        "Pillow package is required. Install with: pip install Pillow"
+    )
 
 from ..config.loader import load_config, get_gemini_api_key
 from ..logs.logger import get_logger
@@ -42,12 +53,12 @@ class GeminiImageModel:
         self.timeout = config.models.timeout
         self.image_format = config.output.image_format
         
-        # Configure the API client
+        # Initialize the API client
         try:
             self.client = genai.Client(api_key=self.api_key)
-            self.logger.info(f"Configured Gemini API for image model: {self.model_name}")
+            self.logger.info(f"Initialized Gemini API client for image model: {self.model_name}")
         except Exception as e:
-            self.logger.error(f"Failed to configure Gemini API: {e}")
+            self.logger.error(f"Failed to initialize Gemini API client: {e}")
             raise
     
     def generate_image(self, prompt: str, output_path: Path, **kwargs) -> Path:
@@ -79,12 +90,6 @@ class GeminiImageModel:
         if not output_path.suffix:
             output_path = output_path.with_suffix(f".{self.image_format}")
         
-        # Generation parameters
-        generation_config = {
-            'response_modalities': ['TEXT', 'IMAGE'],
-            **kwargs
-        }
-        
         self.logger.info(
             f"Generating image with prompt length: {len(prompt)}",
             model=self.model_name,
@@ -101,20 +106,22 @@ class GeminiImageModel:
                     prompt=prompt,
                     config=types.GenerateImagesConfig(
                         number_of_images=1,
+                        aspect_ratio="1:1",
+                        safety_filter_level="BLOCK_LOW_AND_ABOVE",
+                        person_generation="ALLOW_ADULT",
                         **kwargs
                     )
                 )
                 
-                # Extract image data from response
                 if not response or not response.generated_images:
-                    raise RuntimeError("No images generated in response")
+                    raise RuntimeError("No images generated")
                 
                 # Get the first generated image
                 generated_image = response.generated_images[0]
-                image_data = generated_image.image.image_bytes
                 
-                # Save the image
-                self._save_image(image_data, output_path)
+                # Convert image data to PIL Image and save
+                image = Image.open(BytesIO(generated_image.image.image_bytes))
+                image.save(output_path)
                 
                 self.logger.info(
                     f"Successfully generated and saved image on attempt {attempt + 1}",
@@ -179,9 +186,17 @@ class GeminiImageModel:
             True if connection is valid, False otherwise
         """
         try:
-            # Try to list available models to test connection
-            models = self.client.models.list()
-            return len(list(models)) > 0
+            # Try to generate a simple test image to validate connection
+            test_response = self.client.models.generate_images(
+                model=self.model_name,
+                prompt="test",
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    aspect_ratio="1:1",
+                    safety_filter_level="BLOCK_LOW_AND_ABOVE"
+                )
+            )
+            return test_response is not None and len(test_response.generated_images) > 0
         except Exception as e:
             self.logger.error(f"Connection validation failed: {e}")
             return False
