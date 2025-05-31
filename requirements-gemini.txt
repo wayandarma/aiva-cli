@@ -1,0 +1,15 @@
+# Gemini API Dependencies for AIVA CLI
+# Install with: pip install -r requirements-gemini.txt
+
+# Google Generative AI SDK for Gemini models
+google-generativeai>=0.3.0
+
+# Image processing (usually comes with google-generativeai but explicit for clarity)
+Pillow>=9.0.0
+
+# Testing dependencies for HTTP mocking
+pytest>=7.0.0
+pytest-mock>=3.10.0
+
+# Additional utilities
+requests>=2.28.0
