@@ -12,8 +12,8 @@ import traceback
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.generativeai import types
 
 from config.loader import load_config, get_gemini_api_key
 from logs.logger import get_logger
@@ -40,12 +40,12 @@ class GeminiImageModel:
         self.timeout = config.models.timeout
         self.image_format = config.output.image_format
         
-        # Initialize the client
+        # Configure the API key
         try:
-            self.client = genai.Client(api_key=self.api_key)
-            self.logger.info(f"Initialized Gemini image client for model: {self.model_name}")
+            genai.configure(api_key=self.api_key)
+            self.logger.info(f"Configured Gemini API for image model: {self.model_name}")
         except Exception as e:
-            self.logger.error(f"Failed to initialize Gemini image client: {e}")
+            self.logger.error(f"Failed to configure Gemini API: {e}")
             raise
     
     def generate_image(self, prompt: str, output_path: Path, **kwargs) -> Path:
@@ -94,25 +94,24 @@ class GeminiImageModel:
         for attempt in range(self.max_retries):
             try:
                 # Generate images using Imagen 3
-                response = self.client.models.generate_images(
-                    model=self.model_name,
-                    prompt=prompt,
-                    config=types.GenerateImagesConfig(
-                        number_of_images=1,
-                        aspect_ratio="1:1"
-                    )
-                )
+                model = genai.GenerativeModel(self.model_name)
+                response = model.generate_content(prompt)
                 
                 # Extract image data from response
-                if not response or not response.generated_images:
-                    raise RuntimeError("No images generated in response")
+                if not response or not response.parts:
+                    raise RuntimeError("No content generated in response")
                 
-                # Get the first generated image
-                generated_image = response.generated_images[0]
-                if not generated_image.image or not generated_image.image.image_bytes:
+                # Find image part in response
+                image_part = None
+                for part in response.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        image_part = part
+                        break
+                
+                if not image_part or not image_part.inline_data.data:
                     raise RuntimeError("No image data in response")
                 
-                image_data = generated_image.image.image_bytes
+                image_data = image_part.inline_data.data
                 
                 # Save the image
                 self._save_image(image_data, output_path)

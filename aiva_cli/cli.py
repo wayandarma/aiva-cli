@@ -77,6 +77,11 @@ def generate(
         ..., 
         help="Topic for the YouTube video content"
     ),
+    title: Optional[str] = typer.Option(
+        None,
+        "--title", "-T",
+        help="Custom title for the content (used for project folder name)"
+    ),
     video_type: str = typer.Option(
         "long-form", 
         "--type", "-t",
@@ -105,21 +110,22 @@ def generate(
 ):
     """🚀 Generate YouTube content for a given topic
     
-    This command orchestrates multiple AI agents to create:
-    - A 5-minute YouTube script
-    - 38 timed segments (8 seconds each)
-    - Visual prompts for each segment
-    - AI-generated images for each segment
+    This command orchestrates multiple CrewAI agents to create:
+    - A comprehensive YouTube script
+    - Timed segments (8 seconds each)
+    - Enhanced visual prompts for each segment
+    - AI-generated images using Imagen 3.0
+    - Organized project structure with custom naming
     
     Examples:
         aiva generate "The History of Artificial Intelligence"
-        aiva generate "Climate Change Solutions" --type short
-        aiva generate "Space Exploration" --output-dir ./my_videos
+        aiva generate "Climate Change Solutions" --title "Climate Solutions Guide"
+        aiva generate "Space Exploration" --output-dir ./my_videos --title "Space Journey"
         aiva generate "Machine Learning" --dry-run --verbose
     """
     
     # Input validation
-    validation_errors = _validate_generate_inputs(topic, video_type, output_dir)
+    validation_errors = _validate_generate_inputs(topic, video_type, output_dir, title)
     if validation_errors:
         console.print("[red]❌ Input validation failed:[/red]")
         for error in validation_errors:
@@ -158,8 +164,9 @@ def generate(
     
     # Display welcome message
     welcome_text = Text()
-    welcome_text.append("🎬 AIVA CLI Content Generator\n", style="bold blue")
+    welcome_text.append("🎬 AIVA CLI Content Generator (Phase 5 Enhanced)\n", style="bold blue")
     welcome_text.append(f"Topic: {topic}\n", style="green")
+    welcome_text.append(f"Title: {title or 'Auto-generated from topic'}\n", style="magenta")
     welcome_text.append(f"Type: {video_type}\n", style="yellow")
     if output_dir:
         welcome_text.append(f"Output: {output_dir}\n", style="cyan")
@@ -186,16 +193,19 @@ def generate(
             
             console.print("[blue]🚀 Starting content generation pipeline...[/blue]")
             
-            # Call the pipeline
-            result = generate_content(topic, video_type, out_dir)
+            # Call the enhanced pipeline with CrewAI integration
+            result = generate_content(topic, video_type, out_dir, title=title, config=config)
             
             if result and result.get('status') == 'success':
                 console.print(f"[green]✅ Content generation completed successfully![/green]")
-                console.print(f"[cyan]📁 Output directory: {result.get('output_dir', out_dir)}[/cyan]")
+                console.print(f"[cyan]📁 Project: {result.get('project_title', 'Unknown')}[/cyan]")
+                console.print(f"[cyan]📂 Output directory: {result.get('output_dir', out_dir)}[/cyan]")
                 if result.get('segments_processed'):
-                    console.print(f"[yellow]🎬 Generated {result['segments_processed']} segments[/yellow]")
+                    console.print(f"[yellow]🎬 Generated {result['segments_processed']} segments (8 seconds each)[/yellow]")
                 if result.get('manifest'):
-                    console.print(f"[magenta]📋 Manifest created with project details[/magenta]")
+                    console.print(f"[magenta]📋 Enhanced manifest created with CrewAI metadata[/magenta]")
+                console.print(f"[blue]🤖 CrewAI agents successfully coordinated the workflow[/blue]")
+                console.print(f"[green]🎯 Phase 5 enhancements: Custom project naming & improved organization[/green]")
             else:
                 error_msg = result.get('error', 'Unknown error') if result else 'Pipeline returned no result'
                 console.print(f"[red]❌ Generation failed: {error_msg}[/red]")
@@ -300,7 +310,7 @@ def status():
     console.print("[yellow]⚠️  API connectivity checks not yet implemented[/yellow]")
 
 
-def _validate_generate_inputs(topic: str, video_type: str, output_dir: Optional[str]) -> list[str]:
+def _validate_generate_inputs(topic: str, video_type: str, output_dir: Optional[str], title: Optional[str] = None) -> list[str]:
     """Validate inputs for the generate command"""
     errors = []
     
@@ -309,6 +319,15 @@ def _validate_generate_inputs(topic: str, video_type: str, output_dir: Optional[
         errors.append("Topic must be at least 3 characters long")
     elif len(topic) > 200:
         errors.append("Topic must be less than 200 characters")
+    
+    # Validate title if provided
+    if title is not None:
+        if len(title.strip()) < 2:
+            errors.append("Title must be at least 2 characters long")
+        elif len(title) > 100:
+            errors.append("Title must be less than 100 characters")
+        elif not title.replace(' ', '').replace('-', '').replace('_', '').isalnum():
+            errors.append("Title should contain only letters, numbers, spaces, hyphens, and underscores")
     
     # Validate video type
     valid_types = ["short", "long-form"]

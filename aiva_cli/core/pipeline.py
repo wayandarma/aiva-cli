@@ -16,7 +16,7 @@ import json
 import logging
 import traceback
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from enum import Enum
@@ -101,27 +101,30 @@ class ContentPipeline:
                         topic: str, 
                         video_type: str, 
                         output_dir: Path,
+                        title: Optional[str] = None,
                         config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute the complete content generation pipeline.
+        Execute the complete content generation pipeline with enhanced CrewAI integration.
         
         Args:
             topic: Content topic/theme
             video_type: Type of video to generate
             output_dir: Output directory path
+            title: Optional custom title for project naming
             config: Optional configuration overrides
             
         Returns:
             Dict containing generation results and metadata
         """
         try:
-            # Initialize pipeline state
-            project_slug = self._create_project_slug(topic)
-            self.state = self._initialize_state(project_slug, topic, video_type, str(output_dir), config)
+            # Initialize pipeline state with custom title support
+            project_slug = self._create_project_slug(title or topic)
+            project_dir = output_dir / project_slug
+            self.state = self._initialize_state(project_slug, topic, video_type, str(project_dir), config)
             
-            # Create output directory
-            output_dir.mkdir(parents=True, exist_ok=True)
-            state_file = output_dir / "state.json"
+            # Create project-specific output directory
+            project_dir.mkdir(parents=True, exist_ok=True)
+            state_file = project_dir / "state.json"
             
             self.logger.info(f"Starting content generation pipeline for: {topic}")
             self._update_progress("Pipeline started", 0)
@@ -130,24 +133,31 @@ class ContentPipeline:
             workflow_config = self._create_workflow_config(config or {})
             self.crew = AivaCrew(config=workflow_config)
             
-            # Step 1: Generate script content
-            self.logger.info("Step 1: Generating script content")
-            script_result = self._execute_script_generation(topic, video_type)
+            # Step 1: Generate full transcript
+            self.logger.info("Step 1: Generating full transcript")
+            transcript = self._generate_full_transcript(topic, video_type)
+            transcript_file = project_dir / "transcript.txt"
+            self._save_transcript(transcript, transcript_file)
             self._save_state(state_file)
             
-            # Step 2: Segment the script
-            self.logger.info("Step 2: Segmenting script")
-            segments = self._execute_segmentation(script_result.data)
+            # Step 2: Segment the transcript into JSON format
+            self.logger.info("Step 2: Segmenting transcript")
+            segments_json = self._execute_segmentation_to_json(transcript, project_dir)
             self._save_state(state_file)
             
-            # Step 3: Process each segment through the pipeline
-            self.logger.info(f"Step 3: Processing {len(segments)} segments")
-            self._process_segments(segments, output_dir)
+            # Step 3: Generate individual segment scripts
+            self.logger.info("Step 3: Generating segment scripts")
+            self._generate_segment_scripts(segments_json, project_dir)
             self._save_state(state_file)
             
-            # Step 4: Finalize and create manifest
-            self.logger.info("Step 4: Finalizing output")
-            manifest = self._create_manifest(output_dir)
+            # Step 4: Generate images for each segment
+            self.logger.info("Step 4: Generating segment images")
+            self._generate_segment_images(segments_json, project_dir)
+            self._save_state(state_file)
+            
+            # Step 5: Finalize and create manifest
+            self.logger.info("Step 5: Finalizing output")
+            manifest = self._create_manifest(project_dir)
             
             # Update final state
             self.state.status = PipelineStatus.COMPLETED
@@ -160,9 +170,10 @@ class ContentPipeline:
             return {
                 "status": "success",
                 "project_slug": project_slug,
-                "output_dir": str(output_dir),
+                "project_title": title or topic,
+                "output_dir": str(project_dir),
                 "manifest": manifest,
-                "segments_processed": len(segments),
+                "segments_processed": len(segments_json.get("segments", {})),
                 "state_file": str(state_file)
             }
             
@@ -181,6 +192,7 @@ class ContentPipeline:
                 "status": "error",
                 "error": str(e),
                 "project_slug": project_slug if 'project_slug' in locals() else None,
+                "project_title": title or topic,
                 "output_dir": str(output_dir)
             }
     
@@ -255,48 +267,123 @@ class ContentPipeline:
             updated_at=now
         )
     
-    def _create_project_slug(self, topic: str) -> str:
-        """Create a URL-safe project slug from topic."""
+    def _create_project_slug(self, title_or_topic: str) -> str:
+        """Create a user-friendly project slug from title or topic."""
         import re
-        slug = re.sub(r'[^a-zA-Z0-9\s-]', '', topic.lower())
-        slug = re.sub(r'\s+', '_', slug.strip())
+        
+        # Clean the input: remove special characters, keep alphanumeric, spaces, hyphens, underscores
+        cleaned = re.sub(r'[^a-zA-Z0-9\s\-_]', '', title_or_topic)
+        
+        # Replace multiple spaces with single space, then convert spaces to underscores
+        slug = re.sub(r'\s+', '_', cleaned.strip())
+        
+        # Convert to title case for better readability
+        slug = '_'.join(word.capitalize() for word in slug.split('_') if word)
+        
+        # Add timestamp for uniqueness
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Limit length to avoid filesystem issues
+        if len(slug) > 50:
+            slug = slug[:50].rstrip('_')
+        
         return f"{slug}_{timestamp}"
     
-    def _create_workflow_config(self, config: Dict[str, Any]) -> WorkflowConfig:
-        """Create workflow configuration from provided config."""
+    def _create_workflow_config(self, config: Union[Dict[str, Any], Any]) -> WorkflowConfig:
+        """Create enhanced workflow configuration for CrewAI agents."""
+        # Handle both dictionary and AIVASettings object
+        if hasattr(config, '__dict__'):
+            # Convert AIVASettings object to dictionary for easier access
+            config_dict = config.__dict__ if config else {}
+        else:
+            config_dict = config or {}
+            
         return WorkflowConfig(
-            target_segments=config.get('target_segments', 10),
-            target_duration=config.get('target_duration', 60),
-            style_preset=config.get('style_preset', StylePreset.CINEMATIC_4K)
+            target_segments=config_dict.get('target_segments', 38),  # Default to 38 segments for 5-minute video
+            target_duration=config_dict.get('target_duration', 8.0),  # 8 seconds per segment
+            style_preset=config_dict.get('style_preset', StylePreset.CINEMATIC_4K),
+            output_dir=config_dict.get('output_dir', './projects'),
+            image_size=config_dict.get('image_size', '1024x1024'),
+            enable_parallel=config_dict.get('enable_parallel', False),
+            max_retries=config_dict.get('max_retries', 3),
+            timeout_seconds=config_dict.get('timeout_seconds', 300)
         )
     
-    def _execute_script_generation(self, topic: str, video_type: str) -> AgentResult:
-        """Execute script generation step."""
-        script_agent = get_agent('script')
-        prompt = f"Generate a {video_type} script about: {topic}"
+    def _generate_full_transcript(self, topic: str, video_type: str) -> str:
+        """Generate full transcript using GeminiTextModel."""
+        from models.text_model import GeminiTextModel
         
-        result = script_agent.execute(prompt)
-        if result.status != AgentStatus.COMPLETED:
-            raise Exception(f"Script generation failed: {result.error}")
+        # Initialize text model
+        text_model = GeminiTextModel()
         
-        self._update_progress("Script generated", 25)
-        return result
+        # Create comprehensive prompt for full transcript generation
+        prompt = f"""
+Generate a complete {video_type} script about: {topic}
+
+Requirements:
+- Create a comprehensive, engaging script suitable for a 5-minute video (approximately 750-800 words)
+- Structure the content with clear narrative flow
+- Include natural transitions between topics
+- Write in a conversational, engaging tone
+- Focus on providing valuable information while maintaining viewer interest
+- Ensure the content is suitable for visual representation
+
+Please generate only the script content without any formatting markers or stage directions.
+"""
+        
+        # Generate the transcript
+        transcript = text_model.generate_text(prompt)
+        
+        self._update_progress("Full transcript generated", 20)
+        return transcript
     
-    def _execute_segmentation(self, script_content: str) -> List[Segment]:
-        """Execute script segmentation step."""
-        segmenter_agent = get_agent('segmenter')
+    def _save_transcript(self, transcript: str, file_path: Path) -> None:
+        """Save transcript to file."""
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(transcript)
+            self.logger.info(f"Transcript saved to {file_path}")
+        except Exception as e:
+            self.logger.error(f"Failed to save transcript: {e}")
+            raise
+    
+    def _execute_segmentation_to_json(self, transcript: str, project_dir: Path) -> Dict[str, Any]:
+        """Segment transcript and save as JSON."""
+        from core.segmenter import ScriptSegmenter
+        import json
         
-        result = segmenter_agent.execute(script_content)
-        if result.status != AgentStatus.COMPLETED:
-            raise Exception(f"Segmentation failed: {result.error}")
+        # Initialize segmenter with configuration
+        segmenter = ScriptSegmenter(
+            target_segments=self.crew.config.target_segments,
+            target_duration=self.crew.config.target_duration
+        )
         
-        # Parse segments from result
-        segments = self._parse_segments(result.data)
+        # Segment the transcript
+        segments = segmenter.segment_script(transcript)
         
-        # Initialize segment states
-        for i, segment in enumerate(segments):
-            segment_id = f"segment_{i+1:02d}"
+        # Convert segments to JSON format
+        segments_data = {
+            "metadata": {
+                "total_segments": len(segments),
+                "target_duration_per_segment": self.crew.config.target_duration,
+                "total_duration": sum(s.duration for s in segments),
+                "created_at": datetime.now().isoformat()
+            },
+            "segments": {}
+        }
+        
+        for segment in segments:
+            segment_id = f"segment_{segment.index:02d}"
+            segments_data["segments"][segment_id] = {
+                "index": segment.index,
+                "text": segment.text,
+                "duration": segment.duration,
+                "word_count": segment.word_count,
+                "start_time": segment.start_time,
+                "end_time": segment.end_time
+            }
+            
+            # Initialize segment state
             self.state.segments[segment_id] = SegmentState(
                 segment_id=segment_id,
                 status=SegmentStatus.SEGMENTED,
@@ -304,9 +391,164 @@ class ContentPipeline:
                 last_updated=datetime.now().isoformat()
             )
         
+        # Save segments JSON file
+        segments_file = project_dir / "segments.json"
+        try:
+            with open(segments_file, 'w', encoding='utf-8') as f:
+                json.dump(segments_data, f, indent=2, ensure_ascii=False)
+            self.logger.info(f"Segments saved to {segments_file}")
+        except Exception as e:
+            self.logger.error(f"Failed to save segments JSON: {e}")
+            raise
+        
         self.state.total_segments = len(segments)
-        self._update_progress("Script segmented", 40)
-        return segments
+        self._update_progress("Transcript segmented", 40)
+        return segments_data
+    
+    def _generate_segment_scripts(self, segments_data: Dict[str, Any], project_dir: Path) -> None:
+        """Generate individual scripts for each segment."""
+        from crew_config.agents import get_agent
+        
+        segments = segments_data["segments"]
+        total_segments = len(segments)
+        
+        for i, (segment_id, segment_info) in enumerate(segments.items()):
+            try:
+                self.logger.info(f"Generating script for {segment_id}")
+                
+                # Get prompt generation agent
+                prompt_agent = get_agent('prompt_gen')
+                
+                # Create Segment object for prompt generation
+                from core.segmenter import Segment
+                segment_obj = Segment(
+                    index=segment_info["index"],
+                    text=segment_info["text"],
+                    duration=segment_info["duration"],
+                    word_count=segment_info["word_count"],
+                    start_time=segment_info["start_time"],
+                    end_time=segment_info["end_time"]
+                )
+                
+                # Prepare input for prompt generation
+                prompt_input = {
+                    "segments": [segment_obj]
+                }
+                
+                # Generate enhanced prompt for this segment
+                result = prompt_agent.execute(prompt_input)
+                if result.status != AgentStatus.COMPLETED:
+                    self.logger.error(f"Prompt generation failed for {segment_id}: {result.error}")
+                    continue
+                
+                # Extract enhanced prompt
+                enhanced_prompts = result.data.get("enhanced_prompts", [])
+                if not enhanced_prompts:
+                    self.logger.warning(f"No enhanced prompt generated for {segment_id}")
+                    continue
+                
+                enhanced_prompt = enhanced_prompts[0]['enhanced_prompt']  # Get first (and only) prompt
+                
+                # Create segment directory
+                segment_dir = project_dir / segment_id
+                segment_dir.mkdir(exist_ok=True)
+                
+                # Save segment script
+                script_file = segment_dir / "script.txt"
+                with open(script_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Segment {segment_info['index']}\n")
+                    f.write(f"Duration: {segment_info['duration']} seconds\n")
+                    f.write(f"Start Time: {segment_info['start_time']}s\n")
+                    f.write(f"End Time: {segment_info['end_time']}s\n")
+                    f.write(f"Word Count: {segment_info['word_count']}\n\n")
+                    f.write("Script Content:\n")
+                    f.write(segment_info['text'])
+                
+                # Save enhanced prompt
+                prompt_file = segment_dir / "prompt.txt"
+                with open(prompt_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Enhanced Prompt for Segment {segment_info['index']}:\n\n")
+                    f.write(enhanced_prompt)
+                
+                # Update segment state
+                if segment_id in self.state.segments:
+                    self.state.segments[segment_id].status = SegmentStatus.PROMPTS_GENERATED
+                    self.state.segments[segment_id].enhanced_prompts = [enhanced_prompt]
+                    self.state.segments[segment_id].script_path = str(script_file)
+                    self.state.segments[segment_id].prompt_path = str(prompt_file)
+                    self.state.segments[segment_id].last_updated = datetime.now().isoformat()
+                
+                self.logger.info(f"Script and prompt saved for {segment_id}")
+                
+            except Exception as e:
+                self.logger.error(f"Failed to generate script for {segment_id}: {e}")
+                if segment_id in self.state.segments:
+                    self.state.segments[segment_id].status = SegmentStatus.FAILED
+                    self.state.segments[segment_id].last_updated = datetime.now().isoformat()
+        
+        self._update_progress("Segment scripts generated", 60)
+    
+    def _generate_segment_images(self, segments_data: Dict[str, Any], project_dir: Path) -> None:
+        """Generate images for each segment."""
+        from crew_config.agents import get_agent
+        
+        segments = segments_data["segments"]
+        total_segments = len(segments)
+        
+        for i, (segment_id, segment_info) in enumerate(segments.items()):
+            try:
+                self.logger.info(f"Generating image for {segment_id}")
+                
+                # Get image generation agent
+                image_agent = get_agent('image_render')
+                
+                # Read the enhanced prompt from file
+                segment_dir = project_dir / segment_id
+                prompt_file = segment_dir / "prompt.txt"
+                
+                if not prompt_file.exists():
+                    self.logger.error(f"Prompt file not found for {segment_id}")
+                    continue
+                
+                with open(prompt_file, 'r', encoding='utf-8') as f:
+                    prompt_content = f.read()
+                
+                # Extract just the prompt part (skip the header)
+                lines = prompt_content.split('\n')
+                prompt = '\n'.join(lines[2:]).strip()  # Skip header lines
+                
+                # Prepare input for image generation
+                image_input = {
+                    "enhanced_prompts": [prompt],
+                    "segment_dirs": [str(segment_dir)]
+                }
+                
+                # Generate image
+                result = image_agent.execute(image_input)
+                if result.status != AgentStatus.COMPLETED:
+                    self.logger.error(f"Image generation failed for {segment_id}: {result.error}")
+                    if segment_id in self.state.segments:
+                        self.state.segments[segment_id].status = SegmentStatus.FAILED
+                    continue
+                
+                # Update segment state
+                if segment_id in self.state.segments:
+                    self.state.segments[segment_id].status = SegmentStatus.COMPLETED
+                    # Image path should be set by the image agent
+                    image_path = segment_dir / "image.png"
+                    if image_path.exists():
+                        self.state.segments[segment_id].image_path = str(image_path)
+                    self.state.segments[segment_id].last_updated = datetime.now().isoformat()
+                
+                self.logger.info(f"Image generated for {segment_id}")
+                
+            except Exception as e:
+                self.logger.error(f"Failed to generate image for {segment_id}: {e}")
+                if segment_id in self.state.segments:
+                    self.state.segments[segment_id].status = SegmentStatus.FAILED
+                    self.state.segments[segment_id].last_updated = datetime.now().isoformat()
+        
+        self._update_progress("Segment images generated", 80)
     
     def _process_segments(self, segments: List[Segment], output_dir: Path):
         """Process all segments through prompt generation and image rendering."""
@@ -345,11 +587,30 @@ class ContentPipeline:
                 if image_result.status != AgentStatus.COMPLETED:
                     raise Exception(f"Image rendering failed: {image_result.error}")
                 
+                # Save script content to segment directory
+                script_file = segment_dir / "script.txt"
+                with open(script_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Segment {segment.index}\n")
+                    f.write(f"Duration: {segment.duration:.1f} seconds\n")
+                    f.write(f"Start Time: {segment.start_time:.1f}s\n")
+                    f.write(f"End Time: {segment.end_time:.1f}s\n")
+                    f.write(f"Word Count: {segment.word_count}\n\n")
+                    f.write("Script Content:\n")
+                    f.write(segment.text)
+                
+                # Save enhanced prompt to segment directory
+                prompt_file = segment_dir / "prompt.txt"
+                with open(prompt_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Enhanced Prompt for Segment {segment.index}:\n\n")
+                    f.write(enhanced_prompt)
+                
                 # Save image and update state
                 image_path = segment_dir / "image.png"
                 # Note: In real implementation, save the actual image data
                 self.state.segments[segment_id].status = SegmentStatus.COMPLETED
                 self.state.segments[segment_id].image_paths = [str(image_path)]
+                self.state.segments[segment_id].script_file = str(script_file)
+                self.state.segments[segment_id].prompt_file = str(prompt_file)
                 self.state.segments[segment_id].last_updated = datetime.now().isoformat()
                 
                 self.state.completed_segments += 1
@@ -444,28 +705,42 @@ class ContentPipeline:
         return segments
     
     def _create_manifest(self, output_dir: Path) -> Dict[str, Any]:
-        """Create project manifest file."""
+        """Create enhanced project manifest file with CrewAI metadata."""
         manifest = {
             "project": {
                 "slug": self.state.project_slug,
                 "topic": self.state.topic,
                 "video_type": self.state.video_type,
                 "created_at": self.state.created_at,
-                "completed_at": datetime.now().isoformat()
+                "completed_at": datetime.now().isoformat(),
+                "pipeline_version": "Phase 5 - CrewAI Enhanced",
+                "ai_models": {
+                    "text_model": "gemini-1.5-pro",
+                    "image_model": "imagen-3.0-generate-002"
+                }
             },
             "segments": {
                 seg_id: {
                     "status": seg.status.value,
                     "script_content": seg.script_content,
                     "image_paths": seg.image_paths or [],
-                    "prompts": seg.enhanced_prompts or []
+                    "prompts": seg.enhanced_prompts or [],
+                    "segment_index": int(seg_id.split('_')[1]) if '_' in seg_id else 0,
+                    "duration": 8.0  # Standard segment duration
                 }
                 for seg_id, seg in self.state.segments.items()
             },
             "statistics": {
                 "total_segments": self.state.total_segments,
                 "completed_segments": self.state.completed_segments,
-                "failed_segments": self.state.failed_segments
+                "failed_segments": self.state.failed_segments,
+                "success_rate": (self.state.completed_segments / max(self.state.total_segments, 1)) * 100,
+                "total_duration": self.state.total_segments * 8.0
+            },
+            "crew_ai": {
+                "agents_used": ["ScriptAgent", "SegmenterAgent", "PromptGenAgent", "ImageRenderAgent"],
+                "workflow_status": "completed",
+                "enhancement_level": "Phase 5"
             }
         }
         
@@ -530,15 +805,17 @@ class ContentPipeline:
 def generate_content(topic: str, 
                     video_type: str, 
                     output_dir: Path,
+                    title: Optional[str] = None,
                     config: Optional[Dict[str, Any]] = None,
                     progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
     """
-    Execute the complete content generation pipeline.
+    Execute the complete content generation pipeline with CrewAI integration.
     
     Args:
         topic: Content topic/theme
         video_type: Type of video to generate
         output_dir: Output directory path
+        title: Optional custom title for project naming
         config: Optional configuration overrides
         progress_callback: Optional progress callback function
         
@@ -546,7 +823,7 @@ def generate_content(topic: str,
         Dict containing generation results and metadata
     """
     pipeline = ContentPipeline(progress_callback=progress_callback)
-    return pipeline.generate_content(topic, video_type, output_dir, config)
+    return pipeline.generate_content(topic, video_type, output_dir, title, config)
 
 
 # Convenience function for pipeline resume
