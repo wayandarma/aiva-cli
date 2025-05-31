@@ -23,6 +23,7 @@ sys.path.insert(0, str(project_root))
 try:
     from config.loader import load_config, validate_config, AIVASettings
     from logs.logger import setup_logging, get_logger, performance_timer
+    from core.pipeline import generate_content
 except ImportError as e:
     # Fallback for development
     print(f"Warning: Could not import AIVA modules: {e}")
@@ -32,6 +33,7 @@ except ImportError as e:
     setup_logging = None
     get_logger = None
     performance_timer = None
+    generate_content = None
 
 # Initialize Typer app and Rich console
 app = typer.Typer(
@@ -174,12 +176,36 @@ def generate(
         return
     
     try:
-        # TODO: Implement the actual generation pipeline
-        console.print("[red]⚠️  Generation pipeline not yet implemented[/red]")
-        console.print("[blue]📋 This will be implemented in Phase 6: Workflow Implementation[/blue]")
-        
-        # Placeholder for future implementation
-        _placeholder_generation(topic, video_type, output_dir, verbose, config, logger)
+        # Use the new generation pipeline
+        if generate_content:
+            # Determine output directory
+            if output_dir:
+                out_dir = Path(output_dir)
+            else:
+                out_dir = Path("projects")
+            
+            console.print("[blue]🚀 Starting content generation pipeline...[/blue]")
+            
+            # Call the pipeline
+            result = generate_content(topic, video_type, out_dir)
+            
+            if result and result.get('status') == 'success':
+                console.print(f"[green]✅ Content generation completed successfully![/green]")
+                console.print(f"[cyan]📁 Output directory: {result.get('output_dir', out_dir)}[/cyan]")
+                if result.get('segments_processed'):
+                    console.print(f"[yellow]🎬 Generated {result['segments_processed']} segments[/yellow]")
+                if result.get('manifest'):
+                    console.print(f"[magenta]📋 Manifest created with project details[/magenta]")
+            else:
+                error_msg = result.get('error', 'Unknown error') if result else 'Pipeline returned no result'
+                console.print(f"[red]❌ Generation failed: {error_msg}[/red]")
+                if result and result.get('state_file'):
+                    console.print(f"[blue]💡 You can resume from: {result.get('state_file')}[/blue]")
+                raise typer.Exit(1)
+        else:
+            console.print("[red]❌ Pipeline not available - module import failed[/red]")
+            console.print("[blue]💡 Please check your installation and dependencies[/blue]")
+            raise typer.Exit(1)
         
     except Exception as e:
         if logger:

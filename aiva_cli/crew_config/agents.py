@@ -402,8 +402,8 @@ class ImageRenderAgent(BaseAgent):
                     # Extract prompt
                     prompt = prompt_data.get("enhanced_prompt", "")
                     
-                    # Generate image (placeholder - actual implementation would use real AI model)
-                    image_result = self._generate_image(prompt, image_size, i + 1)
+                    # Generate image using the AI model
+                    image_result = self._generate_image(prompt, image_size, i + 1, output_dir)
                     
                     generated_images.append({
                         "segment_index": prompt_data.get("segment_index", i + 1),
@@ -449,25 +449,48 @@ class ImageRenderAgent(BaseAgent):
                 error=str(e)
             )
     
-    def _generate_image(self, prompt: str, size: str, index: int) -> Dict[str, Any]:
-        """Generate image from prompt (placeholder implementation)."""
+    def _generate_image(self, prompt: str, size: str, index: int, output_dir: str = "./generated_images") -> Dict[str, Any]:
+        """Generate image from prompt using the image model."""
         import time
+        import os
+        from pathlib import Path
         
-        # Simulate image generation
         start_time = time.time()
         
-        # In real implementation, this would call the actual image model
-        # For now, return placeholder data
-        image_path = f"segment_{index:03d}.png"
-        
-        generation_time = time.time() - start_time
-        
-        return {
-            "path": image_path,
-            "generation_time": generation_time,
-            "size": size,
-            "format": "PNG"
-        }
+        try:
+            # Ensure output directory exists
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+            
+            # Generate image using the model
+            image_path = os.path.join(output_dir, "image.png")
+            
+            # Use the image model to generate the image
+            result = self.image_model.generate_image(
+                prompt=prompt,
+                output_path=image_path
+            )
+            
+            generation_time = time.time() - start_time
+            
+            return {
+                "path": image_path,
+                "generation_time": generation_time,
+                "size": size,
+                "format": "PNG",
+                "success": True
+            }
+            
+        except Exception as e:
+            generation_time = time.time() - start_time
+            self.logger.error(f"Image generation failed: {e}")
+            return {
+                "path": None,
+                "generation_time": generation_time,
+                "size": size,
+                "format": "PNG",
+                "success": False,
+                "error": str(e)
+            }
     
     def validate_input(self, input_data: List) -> bool:
         """Validate prompts input."""

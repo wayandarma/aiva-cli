@@ -6,18 +6,14 @@ Provides a clean interface for image generation using Google's Imagen 3 model
 with built-in retry logic, error handling, and automatic file saving.
 """
 
-import time
-import logging
-from typing import Optional, Dict, Any
-from pathlib import Path
 import base64
+import time
+import traceback
+from pathlib import Path
+from typing import Optional, Dict, Any
 
-try:
-    import google.generativeai as genai
-except ImportError:
-    raise ImportError(
-        "google-generativeai package is required. Install with: pip install google-generativeai"
-    )
+from google import genai
+from google.genai import types
 
 from config.loader import load_config, get_gemini_api_key
 from logs.logger import get_logger
@@ -44,15 +40,12 @@ class GeminiImageModel:
         self.timeout = config.models.timeout
         self.image_format = config.output.image_format
         
-        # Configure the API
-        genai.configure(api_key=self.api_key)
-        
-        # Initialize the model
+        # Initialize the client
         try:
-            self.model = genai.GenerativeModel(self.model_name)
-            self.logger.info(f"Initialized Gemini image model: {self.model_name}")
+            self.client = genai.Client(api_key=self.api_key)
+            self.logger.info(f"Initialized Gemini image client for model: {self.model_name}")
         except Exception as e:
-            self.logger.error(f"Failed to initialize Gemini image model: {e}")
+            self.logger.error(f"Failed to initialize Gemini image client: {e}")
             raise
     
     def generate_image(self, prompt: str, output_path: Path, **kwargs) -> Path:
@@ -100,21 +93,26 @@ class GeminiImageModel:
         
         for attempt in range(self.max_retries):
             try:
-                # Generate content with image response
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=generation_config
+                # Generate images using Imagen 3
+                response = self.client.models.generate_images(
+                    model=self.model_name,
+                    prompt=prompt,
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="1:1"
+                    )
                 )
                 
                 # Extract image data from response
-                image_data = None
-                for part in response.candidates[0].content.parts:
-                    if hasattr(part, 'inline_data') and part.inline_data:
-                        image_data = part.inline_data.data
-                        break
+                if not response or not response.generated_images:
+                    raise RuntimeError("No images generated in response")
                 
-                if not image_data:
-                    raise RuntimeError("No image data found in response")
+                # Get the first generated image
+                generated_image = response.generated_images[0]
+                if not generated_image.image or not generated_image.image.image_bytes:
+                    raise RuntimeError("No image data in response")
+                
+                image_data = generated_image.image.image_bytes
                 
                 # Save the image
                 self._save_image(image_data, output_path)
@@ -147,21 +145,16 @@ class GeminiImageModel:
         raise RuntimeError(error_msg)
     
     def _save_image(self, image_data: bytes, output_path: Path) -> None:
-        """
-        Save image data to file.
-        
-        Args:
-            image_data: Raw image bytes
-            output_path: Path to save the image
-        """
+        """Save image data to file."""
         try:
+            # Save binary image data to file
             with open(output_path, 'wb') as f:
                 f.write(image_data)
-            
-            self.logger.debug(f"Image saved to {output_path}")
+                
+            self.logger.info(f"Image saved to {output_path}")
             
         except Exception as e:
-            self.logger.error(f"Failed to save image to {output_path}: {e}")
+            self.logger.error(f"Failed to save image: {e}")
             raise
     
     def _calculate_backoff(self, attempt: int) -> float:

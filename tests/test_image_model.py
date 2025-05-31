@@ -19,8 +19,11 @@ sys.modules['google.generativeai'] = mock_genai
 sys.modules['google'] = MagicMock()
 sys.modules['google.generativeai'] = mock_genai
 
+# Add the aiva_cli directory to the path
+sys.path.insert(0, str(Path(__file__).parent.parent / 'aiva_cli'))
+
 # Now we can safely import our modules
-from aiva_cli.models.image_model import GeminiImageModel, generate_image
+from models.image_model import GeminiImageModel, generate_image
 
 
 class TestGeminiImageModel:

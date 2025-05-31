@@ -57,7 +57,7 @@
       "role": "Visual content creator",
       "goal": "Generate high-quality cinematic images",
       "backstory": "AI artist specialized in creating compelling visual content",
-      "model": "imagen-3.0-generate-001"
+      "model": "imagen-3.0-generate-002"
     }
   },
   "workflow": {
