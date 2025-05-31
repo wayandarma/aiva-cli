@@ -6,8 +6,8 @@ Provides abstractions for AI model interactions including text and image generat
 using Google's Gemini API with built-in retry logic and error handling.
 """
 
-from models.text_model import GeminiTextModel, generate_text
-from models.image_model import GeminiImageModel, generate_image
+from .text_model import GeminiTextModel, generate_text
+from .image_model import GeminiImageModel, generate_image
 
 __all__ = [
     'GeminiTextModel',

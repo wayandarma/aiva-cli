@@ -21,9 +21,9 @@ sys.path.insert(0, str(project_root))
 
 # Import AIVA modules
 try:
-    from config.loader import load_config, validate_config, AIVASettings
-    from logs.logger import setup_logging, get_logger, performance_timer
-    from core.pipeline import generate_content
+    from .config.loader import load_config, validate_config, AIVASettings
+    from .logs.logger import setup_logging, get_logger, performance_timer
+    from .core.pipeline import generate_content
 except ImportError as e:
     # Fallback for development
     print(f"Warning: Could not import AIVA modules: {e}")
@@ -90,7 +90,7 @@ def generate(
     output_dir: Optional[str] = typer.Option(
         None,
         "--output-dir", "-o",
-        help="Custom output directory (default: projects/)"
+        help="Custom output directory (default: output/)"
     ),
     config_file: Optional[str] = typer.Option(
         None,
@@ -189,12 +189,37 @@ def generate(
             if output_dir:
                 out_dir = Path(output_dir)
             else:
-                out_dir = Path("projects")
+                out_dir = Path("output")
             
             console.print("[blue]🚀 Starting content generation pipeline...[/blue]")
             
-            # Call the enhanced pipeline with CrewAI integration
-            result = generate_content(topic, video_type, out_dir, title=title, config=config)
+            # Add loading animation and progress tracking
+            from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+            from rich.live import Live
+            import time
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                console=console,
+                transient=True
+            ) as progress:
+                
+                # Create progress tasks
+                main_task = progress.add_task("[cyan]Generating content...", total=100)
+                
+                # Show initial progress
+                progress.update(main_task, advance=10, description="[cyan]Initializing pipeline...")
+                time.sleep(0.5)
+                
+                # Call the enhanced pipeline with CrewAI integration
+                result = generate_content(topic, video_type, out_dir, title=title, config=config, progress_callback=lambda desc, pct: progress.update(main_task, completed=pct, description=f"[cyan]{desc}"))
+                
+                # Complete progress
+                progress.update(main_task, completed=100, description="[green]Content generation completed!")
+                time.sleep(0.5)
             
             if result and result.get('status') == 'success':
                 console.print(f"[green]✅ Content generation completed successfully![/green]")
@@ -298,7 +323,7 @@ def status():
         console.print("[blue]💡 Run 'aiva init' to create configuration[/blue]")
     
     # Check project structure
-    required_dirs = ["crew_config", "core", "models", "config", "logs", "projects"]
+    required_dirs = ["crew_config", "core", "models", "config", "logs", "output"]
     for dir_name in required_dirs:
         dir_path = project_root / dir_name
         if dir_path.exists():
@@ -362,7 +387,7 @@ def _show_generation_plan(topic: str, video_type: str, output_dir: Optional[str]
     if output_dir:
         plan_text.append(f"Output Directory: {output_dir}\n", style="cyan")
     else:
-        plan_text.append("Output Directory: projects/ (default)\n", style="cyan")
+        plan_text.append("Output Directory: output/ (default)\n", style="cyan")
     
     # Configuration status
     if config:

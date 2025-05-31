@@ -58,7 +58,7 @@ class LoggingConfig(BaseModel):
 
 class OutputConfig(BaseModel):
     """Output configuration."""
-    base_dir: str = Field(default="projects")
+    base_dir: str = Field(default="output")
     create_manifest: bool = Field(default=True)
     include_metadata: bool = Field(default=True)
     compress_images: bool = Field(default=False)

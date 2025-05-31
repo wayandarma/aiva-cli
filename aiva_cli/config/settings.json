@@ -75,7 +75,7 @@
   },
   "output": {
     "structure": {
-      "base_dir": "projects",
+      "base_dir": "output",
       "project_naming": "{topic_slug}",
       "segment_dir_format": "segment_{:02d}",
       "manifest_filename": "manifest.json"

@@ -6,9 +6,9 @@ This module contains the core business logic components for content generation:
 - Output management and project structure
 """
 
-from core.segmenter import ScriptSegmenter, Segment, segment_script
-from core.prompt_enhancer import PromptEnhancer, StylePreset, enhance_prompt, enhance_prompts_batch
-from core.output_manager import OutputManager, ProjectMetadata, SegmentOutput, create_project, load_project
+from .segmenter import ScriptSegmenter, Segment, segment_script
+from .prompt_enhancer import PromptEnhancer, StylePreset, enhance_prompt, enhance_prompts_batch
+from .output_manager import OutputManager, ProjectMetadata, SegmentOutput, create_project, load_project
 
 __all__ = [
     # Segmenter

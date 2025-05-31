@@ -18,8 +18,8 @@ except ImportError:
         "google-generativeai package is required. Install with: pip install google-generativeai"
     )
 
-from config.loader import load_config, get_gemini_api_key
-from logs.logger import get_logger
+from ..config.loader import load_config, get_gemini_api_key
+from ..logs.logger import get_logger
 
 
 class GeminiTextModel:

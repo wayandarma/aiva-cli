@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Import core components
-from core.segmenter import ScriptSegmenter, segment_script
-from core.prompt_enhancer import PromptEnhancer, enhance_prompt, StylePreset
-from models.text_model import GeminiTextModel
-from models.image_model import GeminiImageModel
+from ..core.segmenter import ScriptSegmenter, segment_script
+from ..core.prompt_enhancer import PromptEnhancer, enhance_prompt, StylePreset
+from ..models.text_model import GeminiTextModel
+from ..models.image_model import GeminiImageModel
 
 
 class AgentStatus(Enum):

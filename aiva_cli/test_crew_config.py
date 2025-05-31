@@ -10,16 +10,16 @@ import shutil
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from crew_config.agents import (
+from .crew_config.agents import (
     BaseAgent, AgentResult, AgentStatus,
     ScriptAgent, SegmenterAgent, PromptGenAgent, ImageRenderAgent,
     get_agent, list_available_agents
 )
-from crew_config.crew import (
+from .crew_config.crew import (
     AivaCrew, WorkflowConfig, WorkflowResult, WorkflowStatus,
     ConsoleProgressCallback, create_crew, run_workflow
 )
-from core.prompt_enhancer import StylePreset
+from .core.prompt_enhancer import StylePreset
 
 
 class TestAgentRegistry:

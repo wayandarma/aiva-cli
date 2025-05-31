@@ -12,12 +12,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from crew_config.agents import (
-    BaseAgent, AgentResult, AgentStatus,
-    ScriptAgent, SegmenterAgent, PromptGenAgent, ImageRenderAgent,
-    get_agent, list_available_agents
+from .agents import (
+    get_agent, AgentResult, AgentStatus,
+    AGENT_REGISTRY, list_available_agents, BaseAgent,
+    ScriptAgent, SegmenterAgent, PromptGenAgent, ImageRenderAgent
 )
-from core.prompt_enhancer import StylePreset
+from ..core.prompt_enhancer import StylePreset
 
 
 class WorkflowStatus(Enum):

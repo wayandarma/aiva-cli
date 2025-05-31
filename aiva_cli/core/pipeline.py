@@ -22,10 +22,10 @@ from datetime import datetime
 from enum import Enum
 
 # Import AIVA components
-from crew_config.agents import get_agent, AgentResult, AgentStatus
-from crew_config.crew import AivaCrew, WorkflowConfig
-from core.prompt_enhancer import StylePreset
-from core.segmenter import Segment, ScriptSegmenter
+from ..crew_config.agents import get_agent, AgentResult, AgentStatus
+from ..crew_config.crew import AivaCrew, WorkflowConfig
+from .prompt_enhancer import StylePreset
+from .segmenter import Segment, ScriptSegmenter
 
 
 class PipelineStatus(Enum):
@@ -302,7 +302,7 @@ class ContentPipeline:
             target_segments=config_dict.get('target_segments', 38),  # Default to 38 segments for 5-minute video
             target_duration=config_dict.get('target_duration', 8.0),  # 8 seconds per segment
             style_preset=config_dict.get('style_preset', StylePreset.CINEMATIC_4K),
-            output_dir=config_dict.get('output_dir', './projects'),
+            output_dir=config_dict.get('output_dir', './output'),
             image_size=config_dict.get('image_size', '1024x1024'),
             enable_parallel=config_dict.get('enable_parallel', False),
             max_retries=config_dict.get('max_retries', 3),
@@ -311,7 +311,7 @@ class ContentPipeline:
     
     def _generate_full_transcript(self, topic: str, video_type: str) -> str:
         """Generate full transcript using GeminiTextModel."""
-        from models.text_model import GeminiTextModel
+        from ..models.text_model import GeminiTextModel
         
         # Initialize text model
         text_model = GeminiTextModel()
@@ -349,7 +349,7 @@ Please generate only the script content without any formatting markers or stage 
     
     def _execute_segmentation_to_json(self, transcript: str, project_dir: Path) -> Dict[str, Any]:
         """Segment transcript and save as JSON."""
-        from core.segmenter import ScriptSegmenter
+        from .segmenter import ScriptSegmenter
         import json
         
         # Initialize segmenter with configuration
@@ -407,7 +407,7 @@ Please generate only the script content without any formatting markers or stage 
     
     def _generate_segment_scripts(self, segments_data: Dict[str, Any], project_dir: Path) -> None:
         """Generate individual scripts for each segment."""
-        from crew_config.agents import get_agent
+        from ..crew_config.agents import get_agent
         
         segments = segments_data["segments"]
         total_segments = len(segments)
@@ -420,7 +420,7 @@ Please generate only the script content without any formatting markers or stage 
                 prompt_agent = get_agent('prompt_gen')
                 
                 # Create Segment object for prompt generation
-                from core.segmenter import Segment
+                from .segmenter import Segment
                 segment_obj = Segment(
                     index=segment_info["index"],
                     text=segment_info["text"],
@@ -489,58 +489,80 @@ Please generate only the script content without any formatting markers or stage 
         self._update_progress("Segment scripts generated", 60)
     
     def _generate_segment_images(self, segments_data: Dict[str, Any], project_dir: Path) -> None:
-        """Generate images for each segment."""
-        from crew_config.agents import get_agent
+        """Generate images for each segment using enhanced prompts."""
+        from ..crew_config.agents import get_agent
         
         segments = segments_data["segments"]
         total_segments = len(segments)
         
+        self.logger.info(f"Starting image generation for {total_segments} segments")
+        self._update_progress(f"Starting image generation for {total_segments} segments", 65)
+        
         for i, (segment_id, segment_info) in enumerate(segments.items()):
             try:
-                self.logger.info(f"Generating image for {segment_id}")
+                progress_pct = 65 + (i / total_segments) * 15  # 65-80% range for image generation
+                self._update_progress(f"Generating image for {segment_id} ({i+1}/{total_segments})", progress_pct)
+                self.logger.info(f"Generating image for {segment_id} ({i+1}/{total_segments})")
                 
                 # Get image generation agent
                 image_agent = get_agent('image_render')
                 
-                # Read the enhanced prompt from file
-                segment_dir = project_dir / segment_id
-                prompt_file = segment_dir / "prompt.txt"
-                
-                if not prompt_file.exists():
-                    self.logger.error(f"Prompt file not found for {segment_id}")
+                # Get enhanced prompt from segment state
+                if segment_id not in self.state.segments:
+                    self.logger.error(f"Segment {segment_id} not found in state")
                     continue
                 
-                with open(prompt_file, 'r', encoding='utf-8') as f:
-                    prompt_content = f.read()
+                segment_state = self.state.segments[segment_id]
+                enhanced_prompts = segment_state.enhanced_prompts
                 
-                # Extract just the prompt part (skip the header)
-                lines = prompt_content.split('\n')
-                prompt = '\n'.join(lines[2:]).strip()  # Skip header lines
+                if not enhanced_prompts:
+                    self.logger.error(f"No enhanced prompts found for {segment_id}")
+                    continue
+                
+                # Use the first enhanced prompt
+                enhanced_prompt = enhanced_prompts[0]
+                
+                # Prepare segment directory
+                segment_dir = project_dir / segment_id
+                segment_dir.mkdir(exist_ok=True)
                 
                 # Prepare input for image generation
                 image_input = {
-                    "enhanced_prompts": [prompt],
-                    "segment_dirs": [str(segment_dir)]
+                    "enhanced_prompts": [{
+                        "enhanced_prompt": enhanced_prompt,
+                        "segment_index": i + 1
+                    }]
                 }
                 
                 # Generate image
-                result = image_agent.execute(image_input)
+                result = image_agent.execute(image_input, output_dir=str(segment_dir))
+                
                 if result.status != AgentStatus.COMPLETED:
                     self.logger.error(f"Image generation failed for {segment_id}: {result.error}")
-                    if segment_id in self.state.segments:
-                        self.state.segments[segment_id].status = SegmentStatus.FAILED
+                    self.state.segments[segment_id].status = SegmentStatus.FAILED
+                    self.state.segments[segment_id].last_updated = datetime.now().isoformat()
                     continue
                 
-                # Update segment state
-                if segment_id in self.state.segments:
-                    self.state.segments[segment_id].status = SegmentStatus.COMPLETED
-                    # Image path should be set by the image agent
-                    image_path = segment_dir / "image.png"
-                    if image_path.exists():
-                        self.state.segments[segment_id].image_path = str(image_path)
-                    self.state.segments[segment_id].last_updated = datetime.now().isoformat()
+                # Update segment state with image information
+                generated_images = result.data.get('generated_images', [])
+                if generated_images and generated_images[0].get('success'):
+                    image_path = generated_images[0].get('image_path')
+                    if image_path and Path(image_path).exists():
+                         self.state.segments[segment_id].image_path = image_path
+                         self.state.segments[segment_id].status = SegmentStatus.COMPLETED
+                         self.logger.info(f"Image successfully generated for {segment_id}: {image_path}")
+                         self._update_progress(f"✅ Image completed for {segment_id}", progress_pct + (1 / total_segments) * 15)
+                    else:
+                        self.logger.warning(f"Image file not found for {segment_id}")
+                        self.state.segments[segment_id].status = SegmentStatus.FAILED
+                else:
+                    self.logger.error(f"Image generation unsuccessful for {segment_id}")
+                    self.state.segments[segment_id].status = SegmentStatus.FAILED
                 
-                self.logger.info(f"Image generated for {segment_id}")
+                self.state.segments[segment_id].last_updated = datetime.now().isoformat()
+                
+                # Save state after each image generation
+                self._save_state(project_dir)
                 
             except Exception as e:
                 self.logger.error(f"Failed to generate image for {segment_id}: {e}")
@@ -794,11 +816,16 @@ Please generate only the script content without any formatting markers or stage 
     def _update_progress(self, message: str, progress: float):
         """Update progress via callback if available."""
         if self.progress_callback:
-            self.progress_callback({
-                "message": message,
-                "progress": progress,
-                "timestamp": datetime.now().isoformat()
-            })
+            try:
+                # Try CLI-style callback first (description, percentage)
+                self.progress_callback(message, progress)
+            except TypeError:
+                # Fallback to dict-style callback
+                self.progress_callback({
+                    "message": message,
+                    "progress": progress,
+                    "timestamp": datetime.now().isoformat()
+                })
 
 
 # Convenience function for direct pipeline execution
