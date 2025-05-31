@@ -1,0 +1,225 @@
+AIVA CLI — Agentic Content Generator via CLI
+
+📍 Project Summary
+AIVA CLI is a command-line-based content generation pipeline powered by Agentic AI architecture (via CrewAI). It enables users to produce YouTube-ready content—including a 5-minute script, 38 visual prompts, and AI-generated images—through a single command. It is designed for creators, developers, and automation workflows to rapidly prototype video content from textual prompts.
+The system uses multi-agent collaboration to:
+Generate video scripts with natural language reasoning
+
+
+Break the script into 8-second narrative segments
+
+
+Produce high-fidelity image prompts per segment
+
+
+Render illustrations with Gemini Imagine 3
+
+
+Log, retry, and structure the output automatically
+
+
+
+🎯 Goals
+Automate content creation workflows (text + visual) with minimal user input
+
+
+Use CrewAI agents to modularize responsibility and enable reasoning pipelines
+
+
+Ensure outputs are coherent, cinematic, and ready-to-produce
+
+
+Support future extensions: TTS, video stitching, automatic publishing
+
+
+
+🧠 Architecture Overview
+┌──────────────┐         ┌─────────────┐       ┌────────────┐
+│ User Prompt  ├──▶ CLI ─┤ Crew Orches ├─────▶│ ScriptAgent│
+└──────────────┘         └─────────────┘       └─────┬──────┘
+                                                         ▼
+                                                ┌───────────────┐
+                                                │ SegmenterAgent│
+                                                └─────┬─────────┘
+                                                      ▼
+                                             ┌────────────────┐
+                                             │ PromptGenAgent │
+                                             └─────┬──────────┘
+                                                   ▼
+                                          ┌──────────────────┐
+                                          │ ImageRenderAgent │
+                                          └──────────────────┘
+
+🔁 Core Workflow
+User provides a topic and video type (Short or 5-min long-form)
+
+
+CrewAI orchestrates a pipeline of specialized agents:
+
+
+ScriptAgent: writes the full script
+
+
+SegmenterAgent: divides the script into 8-second units (~38 segments)
+
+
+PromptGenAgent: generates an image prompt per segment
+
+
+ImageRenderAgent: renders each image using Gemini Imagine 3
+
+
+System saves output in a structured directory
+
+
+Optional: Extend with reviewers, TTS, and video rendering
+
+
+
+🧩 CrewAI Agents Definition
+Agent Name
+Role Description
+Model
+ScriptAgent
+Generates full YouTube script
+Gemini 2.5 Flash / Pro
+SegmenterAgent
+Splits script into 8s segments (~38)
+Local logic or LLM
+PromptGenAgent
+Crafts rich, visual prompts per segment
+Gemini 2.5 Flash
+ImageRenderAgent
+Generates images from prompt using Gemini Imagine 3
+Gemini Imagine 3
+ReviewerAgent (optional)
+Evaluates output quality, tone, and clarity
+Gemini Pro / Claude
+
+
+🛠️ Tech Stack
+Module
+Tools / Frameworks
+CLI Interface
+Typer
+Agentic System
+CrewAI
+LLM API Access
+[Gemini API](via OpenRouter or Google AI SDK)
+Image Generation
+[Gemini Imagine 3]
+Config & Secrets
+.env, pydantic, or dynaconf
+File/Project Management
+Python pathlib, uuid, os
+Logging / Error Handling
+Python logging
+
+
+📂 Project Structure
+aiva_cli/
+│
+├── cli.py                    # Typer CLI interface
+├── crew_config/
+│   ├── crew.py               # CrewAI orchestration config
+│   └── agents.py             # Agent role definitions
+│
+├── core/
+│   ├── segmenter.py          # 8s segment splitter
+│   ├── prompt_enhancer.py    # Enhances image prompt descriptiveness
+│   ├── output_manager.py     # Handles folder creation, saving
+│
+├── models/
+│   ├── text_model.py         # Handles connection to Gemini Pro/Flash
+│   └── image_model.py        # Handles call to Gemini Imagine 3
+│
+├── config/
+│   └── settings.json         # System settings and parameters
+│   └── .env                  # API Keys and secrets
+│
+├── logs/
+│   └── run_<timestamp>.log   # Detailed logs per generation run
+│
+└── projects/
+    └── {topic_slug}/
+         ├── segment_01/
+         │    ├── text.txt
+         │    └── image.png
+         ├── ...
+         └── manifest.json     # Metadata: prompt, models used, errors
+
+🧠 Prompting Strategy
+1. 
+Script Prompt Template
+Create a cinematic and educational YouTube script (5 minutes long) about the topic: [TOPIC]. 
+Target audience: 20–35 year olds in Indonesia.  
+Use a compelling and immersive tone like Vox or ColdFusion.
+
+Split the script into 38 segments of 8 seconds each.  
+For each segment, include a short visual description that can be used to generate an image.
+
+Return format:
+[
+  {
+    "segment": "<narrative sentence>",
+    "image_prompt": "<visual description>"
+  },
+  ...
+]
+
+2. 
+Image Prompt Enhancer
+def enhance_prompt(description: str) -> str:
+    return f"Ultra-realistic cinematic illustration of {description}, in 4K, golden hour lighting, dramatic mood, depth-of-field, detailed textures."
+
+🔄 Output Format
+Each run will generate:
+projects/
+└── camp_nou_history/
+    ├── segment_01/
+    │    ├── text.txt
+    │    └── image.png
+    ├── ...
+    └── manifest.json
+
+🔐 Configuration Parameters
+Key
+Description
+MODEL_TEXT
+gemini-pro or gemini-flash
+MODEL_IMAGE
+gemini-imagine-3
+SEGMENT_DURATION
+Default: 8 seconds
+SCRIPT_LENGTH
+5 minutes (~600–700 words)
+LOG_LEVEL
+DEBUG / INFO / ERROR
+
+
+🚨 Error Handling
+Each step logs success/failure
+
+
+Retries image generation up to 3x
+
+
+Invalid segments marked in manifest.json
+
+
+CLI shows summary at the end of generation
+
+
+
+🌱 Extensibility
+This project is designed to grow:
+Add a TTSAgent to convert narration to audio
+
+
+Add VideoRenderAgent (CapCut, ffmpeg) for final video stitching
+
+
+Integrate with Notion, n8n, or Zapier for automation triggers
+
+
+Serve via FastAPI for webhooks or microservices
